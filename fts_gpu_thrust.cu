@@ -29,6 +29,9 @@
 #include <thrust/extrema.h>
 #include "step.h"
 #include "diblock.h"
+#include "clfts_params.h"
+#include "file_IO.h"
+#include <iomanip>
 #define cuFFTFORWARD -1
 #define cuFFTINVERSE 1
 using namespace std;
@@ -284,57 +287,46 @@ template <typename T> int sgn(T val) {
 int main ()
 {
   thrust::complex<double> I={0.0,1.0};
-  double chi_b, chi_e, zeta, L[3], V, dt, C, sigma, adt;
+  double chi_b, chi_e, zeta, L[3], dt, C, sigma, adt;
   thrust::complex<double> lnQ, wm, wm_sq, wp, Hf;
-  double kx_sq, ky_sq, kz_sq;
-  int    r, k, k0, k1, k2, K0, K1, K2, mK0, mK1, mK2, N;
+  int    r, N;
   int    it, equil_its, sim_its, sample_freq;
-  FILE *in, *out;
+  FILE *out;
   int WRITE_FREQ = 50000;
   int OUT_FREQ = 100;
   double dK_ATS = 1E-4;
   int seed;
 
+  cout << "Creating clfts_params()..." << endl;
+  clfts_params *P = new clfts_params("input");
+  cout << "clfts_params() created!" << endl;
+  P->outputParameters();
 
-  in = fopen("input","r");
-  fscanf(in,"%d %d %lf %lf %lf %lf",&N,&NA,&chi_e,&zeta,&C,&dt);
-  fscanf(in,"%d %d %d %lf %lf %lf",&m[0],&m[1],&m[2],&L[0],&L[1],&L[2]);
-  fscanf(in,"%d %d %d",&equil_its,&sim_its,&sample_freq);
-
-  sim_its = (sim_its/sample_freq)*sample_freq;  
-  M = m[0]*m[1]*m[2];
-  V = L[0]*L[1]*L[2];
-  sigma = sqrt(2.0*M*dt/(C*V));
-  NB = N-NA;
-
-  chi_b = chi_e/(z_inf_discrete(L, C*C) + 0.028807);
-  cout << "chi_b = " << chi_b << endl;
-  cout << "chi_e = " << chi_e << endl;
+  // Get parameters
+  N = P->N();
+  NA = P->NA();
+  chi_e = P->XeN();
+  chi_b = P->XbN();
+  zeta = P->zeta();
+  C = P->C();
+  dt = P->dt();
+  m[0] = P->mx();
+  m[1] = P->my();
+  m[2] = P->mz();
+  L[0] = P->Lx();
+  L[1] = P->Ly();
+  L[2] = P->Lz();
+  equil_its = P->equil_its();
+  sim_its = P->sim_its();
+  sample_freq = P->sample_freq();
+  M = P->M();
+  sigma = P->sigma();
+  NB = P->NB();
 
   cout << "Creating diblock()..." << endl;
   dbc = new diblockClass(NA, NB, m, L, M);
   cout << "diblock() created!" << endl;
 
-
-
-  for (k0=-(m[0]-1)/2; k0<=m[0]/2; k0++) {
-    K0 = (k0<0)?(k0+m[0]):k0;
-    mK0 = (k0>0)?(-k0+m[0]):-k0;
-    kx_sq = k0*k0/(L[0]*L[0]);
-
-    for (k1=-(m[1]-1)/2; k1<=m[1]/2; k1++) {
-      K1 = (k1<0)?(k1+m[1]):k1;
-      mK1 = (k1>0)?(-k1+m[1]):-k1;
-      ky_sq = k1*k1/(L[1]*L[1]);
-
-      for (k2=-(m[2]-1)/2; k2<=m[2]/2; k2++) {
-        K2 = (k2<0)?(k2+m[2]):k2;
-        mK2 = (k2>0)?(-k2+m[2]):-k2;
-        kz_sq = k2*k2/(L[2]*L[2]);
-        k = K2+m[2]*(K1+m[1]*K0);
-      }
-    }
-  }
   
   // declare w on the host and gpu
   hvec_cmplx w(4*M);
@@ -349,14 +341,8 @@ int main ()
   seed = 123456789;
   curandSetPseudoRandomGeneratorSeed(gen, seed);
 
-
   // read fields from input file 
-  for (r=0; r<2*M; r++) {
-    fscanf(in,"%lf %lf", &kx_sq, &ky_sq);
-    w[r].real(kx_sq);
-    w[r].imag(ky_sq);
-  }
-  fclose(in);
+  file_IO::readCmplxVector(w, "input", 2*M, 3);
 
   // write input to checkpoint file for easier programming when loading from numerical crash
   write_array_to_file("Wm_eq_", 0, (complex<double>*)thrust::raw_pointer_cast(&((w)[0])), M);
@@ -550,6 +536,7 @@ int main ()
 
   //delete Step;
   delete dbc;
+  delete P;
   return 0;
 
 }
