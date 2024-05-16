@@ -30,6 +30,7 @@
 #include "step.h"
 #include "diblock.h"
 #include "clfts_params.h"
+#include "file_IO.h"
 #include <iomanip>
 #define cuFFTFORWARD -1
 #define cuFFTINVERSE 1
@@ -286,12 +287,11 @@ template <typename T> int sgn(T val) {
 int main ()
 {
   thrust::complex<double> I={0.0,1.0};
-  double chi_b, chi_e, zeta, L[3], V, dt, C, sigma, adt;
+  double chi_b, chi_e, zeta, L[3], dt, C, sigma, adt;
   thrust::complex<double> lnQ, wm, wm_sq, wp, Hf;
-  double wR, wI;
   int    r, N;
   int    it, equil_its, sim_its, sample_freq;
-  FILE *in, *out;
+  FILE *out;
   int WRITE_FREQ = 50000;
   int OUT_FREQ = 100;
   double dK_ATS = 1E-4;
@@ -302,19 +302,6 @@ int main ()
   cout << "clfts_params() created!" << endl;
   P->outputParameters();
 
-
-  in = fopen("input","r");
-  fscanf(in,"%d %d %lf %lf %lf %lf",&N,&NA,&chi_e,&zeta,&C,&dt);
-  fscanf(in,"%d %d %d %lf %lf %lf",&m[0],&m[1],&m[2],&L[0],&L[1],&L[2]);
-  fscanf(in,"%d %d %d",&equil_its,&sim_its,&sample_freq);
-
-  sim_its = (sim_its/sample_freq)*sample_freq;  
-  M = m[0]*m[1]*m[2];
-  V = L[0]*L[1]*L[2];
-  sigma = sqrt(2.0*M*dt/(C*V));
-  NB = N-NA;
-
-
   // Get parameters
   N = P->N();
   NA = P->NA();
@@ -323,28 +310,18 @@ int main ()
   zeta = P->zeta();
   C = P->C();
   dt = P->dt();
-
   m[0] = P->mx();
   m[1] = P->my();
   m[2] = P->mz();
   L[0] = P->Lx();
   L[1] = P->Ly();
   L[2] = P->Lz();
-
   equil_its = P->equil_its();
   sim_its = P->sim_its();
   sample_freq = P->sample_freq();
-
   M = P->M();
-  V = P->V();
   sigma = P->sigma();
   NB = P->NB();
-
-
-
-
-
-
 
   cout << "Creating diblock()..." << endl;
   dbc = new diblockClass(NA, NB, m, L, M);
@@ -364,14 +341,8 @@ int main ()
   seed = 123456789;
   curandSetPseudoRandomGeneratorSeed(gen, seed);
 
-
   // read fields from input file 
-  for (r=0; r<2*M; r++) {
-    fscanf(in,"%lf %lf", &wR, &wI);
-    w[r].real(wR);
-    w[r].imag(wI);
-  }
-  fclose(in);
+  file_IO::readCmplxVector(w, "input", 2*M, 3);
 
   // write input to checkpoint file for easier programming when loading from numerical crash
   write_array_to_file("Wm_eq_", 0, (complex<double>*)thrust::raw_pointer_cast(&((w)[0])), M);
