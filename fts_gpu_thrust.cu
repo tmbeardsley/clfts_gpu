@@ -29,6 +29,7 @@
 #include <thrust/extrema.h>
 #include "step.h"
 #include "diblock.h"
+#include "clfts_params.h"
 #define cuFFTFORWARD -1
 #define cuFFTINVERSE 1
 using namespace std;
@@ -286,14 +287,21 @@ int main ()
   thrust::complex<double> I={0.0,1.0};
   double chi_b, chi_e, zeta, L[3], V, dt, C, sigma, adt;
   thrust::complex<double> lnQ, wm, wm_sq, wp, Hf;
-  double kx_sq, ky_sq, kz_sq;
-  int    r, k, k0, k1, k2, K0, K1, K2, mK0, mK1, mK2, N;
+  //double kx_sq, ky_sq, kz_sq;
+  double wR, wI;
+  int    r, N;
+  //int    r, k, k0, k1, k2, K0, K1, K2, mK0, mK1, mK2, N;
   int    it, equil_its, sim_its, sample_freq;
   FILE *in, *out;
   int WRITE_FREQ = 50000;
   int OUT_FREQ = 100;
   double dK_ATS = 1E-4;
   int seed;
+
+  cout << "Creating clfts_params()..." << endl;
+  clfts_params *P = new clfts_params("input");
+  cout << "clfts_params() created!" << endl;
+  P->outputParameters();
 
 
   in = fopen("input","r");
@@ -317,24 +325,24 @@ int main ()
 
 
 
-  for (k0=-(m[0]-1)/2; k0<=m[0]/2; k0++) {
-    K0 = (k0<0)?(k0+m[0]):k0;
-    mK0 = (k0>0)?(-k0+m[0]):-k0;
-    kx_sq = k0*k0/(L[0]*L[0]);
+  //for (k0=-(m[0]-1)/2; k0<=m[0]/2; k0++) {
+   // K0 = (k0<0)?(k0+m[0]):k0;
+  //  mK0 = (k0>0)?(-k0+m[0]):-k0;
+  //  kx_sq = k0*k0/(L[0]*L[0]);
 
-    for (k1=-(m[1]-1)/2; k1<=m[1]/2; k1++) {
-      K1 = (k1<0)?(k1+m[1]):k1;
-      mK1 = (k1>0)?(-k1+m[1]):-k1;
-      ky_sq = k1*k1/(L[1]*L[1]);
+  //  for (k1=-(m[1]-1)/2; k1<=m[1]/2; k1++) {
+  //    K1 = (k1<0)?(k1+m[1]):k1;
+  //    mK1 = (k1>0)?(-k1+m[1]):-k1;
+  //    ky_sq = k1*k1/(L[1]*L[1]);
 
-      for (k2=-(m[2]-1)/2; k2<=m[2]/2; k2++) {
-        K2 = (k2<0)?(k2+m[2]):k2;
-        mK2 = (k2>0)?(-k2+m[2]):-k2;
-        kz_sq = k2*k2/(L[2]*L[2]);
-        k = K2+m[2]*(K1+m[1]*K0);
-      }
-    }
-  }
+  //    for (k2=-(m[2]-1)/2; k2<=m[2]/2; k2++) {
+  //      K2 = (k2<0)?(k2+m[2]):k2;
+   //     mK2 = (k2>0)?(-k2+m[2]):-k2;
+   //     kz_sq = k2*k2/(L[2]*L[2]);
+  //      k = K2+m[2]*(K1+m[1]*K0);
+  //    }
+  //  }
+ // }
   
   // declare w on the host and gpu
   hvec_cmplx w(4*M);
@@ -352,9 +360,9 @@ int main ()
 
   // read fields from input file 
   for (r=0; r<2*M; r++) {
-    fscanf(in,"%lf %lf", &kx_sq, &ky_sq);
-    w[r].real(kx_sq);
-    w[r].imag(ky_sq);
+    fscanf(in,"%lf %lf", &wR, &wI);
+    w[r].real(wR);
+    w[r].imag(wI);
   }
   fclose(in);
 
@@ -550,6 +558,7 @@ int main ()
 
   //delete Step;
   delete dbc;
+  delete P;
   return 0;
 
 }
