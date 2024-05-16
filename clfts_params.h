@@ -39,7 +39,7 @@ class clfts_params {
     int    M_;                  // Total number of field mesh points
     double V_;                  // Volume of the simulation box
     double sigma_;              // Standard deviation of random noise multiplied by N
-    double chi_b_;              // Bare chi of the simulation
+    double XbN_;                // Bare chi of the simulation multiplied by N
 
     public: 
         clfts_params(std::string inputFile) {
@@ -57,10 +57,11 @@ class clfts_params {
             std::cout << "N = "             << N_           << std::endl;
             std::cout << "NA = "            << NA_          << std::endl;
             std::cout << "NB = "            << NB_          << std::endl;
-            std::cout << "chi_b = "         << chi_b_       << std::endl;
+            std::cout << "XeN = "           << XeN_         << std::endl;
+            std::cout << "XbN = "           << XbN_         << std::endl;
+            std::cout << "zeta = "          << zeta_        << std::endl;
             std::cout << "C = "             << C_           << std::endl;
             std::cout << "dt = "            << dt_          << std::endl;
-            std::cout << "XeN = "           << XeN_         << std::endl;
             //std::cout << "isXeN = "         << isXeN_       << std::endl;
             std::cout << "m[0] = "          << m_[0]        << std::endl;
             std::cout << "m[1] = "          << m_[1]        << std::endl;
@@ -82,8 +83,9 @@ class clfts_params {
         int N() { return N_; }
         int NA() { return NA_; }
         int NB() { return NB_; }
-        double XbN() { return chi_b_; }
+        double XbN() { return XbN_; }
         double XeN() { return XeN_; }
+        double zeta() { return zeta_; }
         double C() { return C_; }
         double dt() { return dt_; }
         //int isXeN() { return isXeN_; }
@@ -143,7 +145,7 @@ class clfts_params {
             try {
                 if (!(ss >> N_))        throw invalid_argument("Cannot read N\n");
                 if (!(ss >> NA_))       throw invalid_argument("Cannot read NA\n");
-                if (!(ss >> XeN_))    throw invalid_argument("Cannot read XeN\n");
+                if (!(ss >> XeN_))      throw invalid_argument("Cannot read XeN\n");
                 if (!(ss >> zeta_))     throw invalid_argument("Cannot read zeta\n");
                 if (!(ss >> C_))        throw invalid_argument("Cannot read C\n");
                 if (!(ss >> dt_))       throw invalid_argument("Cannot read dt\n");
@@ -203,6 +205,9 @@ class clfts_params {
             //    XeN_ = chi_b_*z_inf;
             //}
 
+            // Transform from Xe to Xb
+            XbN_ = XeN_ / z_inf_discrete_compressible(L_, m_, N_, C_, zeta_, 20);
+
             calculate_Derived_Params();
         }
 
@@ -214,8 +219,13 @@ class clfts_params {
             NB_ = N_-NA_;
         }
 
+        double z_inf_discrete_compressible(std::vector<double>& L, std::vector<int>& m, int N, double C, double zeta, int steps = 80) {
+            return z_inf_discrete(L, m, N, C * C) + dz_inf_discrete_compressible(L, m, N, C, 1.0 / zeta, 20);
+            //return z_inf_discrete(L, m, N, C * C) + 0.028807;
+        }
+
         // Calculate incompressible z_infinity (discrete chain)
-        double z_inf_discrete(double *L, int *m, int N, double Nbar, int tmax=100) {
+        double z_inf_discrete(std::vector<double>& L, std::vector<int>& m, int N, double Nbar, int tmax=100) {
             double sum, prod=1.0, X, ell, R0, R0dL[3];
             sum = 0.5;
             R0 = sqrt((double) N);
@@ -237,4 +247,36 @@ class clfts_params {
             return 1.0 - sum - 3*R0/(ell*sqrt(M_PI*Nbar)*X);
         }
 
+        // Calculate the contribution to z_inf due to compressibility
+        // Note: steps = number of steps per dimension in integration
+        // Note: kappa = 1/zeta so that kappa=0 for incompressible system
+        // Note: Credit for this function to Prof. Mark Matsen
+        double dz_inf_discrete_compressible(std::vector<double>& L, std::vector<int>& m, int N, double C, double kappa, int steps = 80) {
+            double Dz = 0.0, T, X;
+            double dkx, dky, dkz, kx, ky, kz;
+            int wx, wy, wz;
+            if (kappa > 0.0) {
+                dkx = M_PI * m[0] / (L[0] * steps);
+                dky = M_PI * m[1] / (L[1] * steps);
+                dkz = M_PI * m[2] / (L[2] * steps);
+                for (int i = 0; i <= steps; i++) {
+                    kx = i * dkx;
+                    wx = (i == 0 || i == steps) ? 1 : 2;
+                    for (int j = 0; j <= steps; j++) {
+                        ky = j * dky;
+                        wy = (j == 0 || j == steps) ? 1 : 2;
+                        for (int k = 0; k <= steps; k++) {
+                            kz = k * dkz;
+                            wz = (k == 0 || k == steps) ? 1 : 2;
+                            X = (kx*kx + ky*ky + kz*kz) / (12.0 * N);
+                            T = tanh(X);
+                            if (X != 0.0) Dz += wx * wy * wz * (1.0 - 1.0 / (1.0 + (T*N*kappa))) / T;
+                        }
+                    }
+                }
+                Dz *= dkx * dky * dkz / pow(2 * M_PI, 3) / (C * N);
+            }
+            std::cout << "Dz = " << Dz << std::endl;
+            return Dz;
+        }
 };
