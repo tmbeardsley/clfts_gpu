@@ -77,10 +77,13 @@ class diblockClass {
     thrust::host_vector<thrust::device_vector<thrust::complex<double>>::iterator> q1_;      // Array of pointers to q_{j=i}(r), where j is the monomer index and i is array index
     thrust::host_vector<thrust::device_vector<thrust::complex<double>>::iterator> q2_;      // Array of pointers to q^_{j=N+1-i}(r), where j is the monomer index and i is array index
 
+    thrust::complex<double> Q_;                                                             // Partition function after the last call to calc_concs()
+
     // Simulation constants derived from the input file (see lfts_params.h for details)
     int M_;
     int NA_;
     int N_;
+
 
 
     public:
@@ -91,6 +94,8 @@ class diblockClass {
             M_ = M;
             NA_ = NA;
             N_ = NA+NB;
+
+            Q_ = 0.0;
 
             // Allocate gpu memory for h_gpu_ and qr_gpu_
             h_gpu_.resize(2*M);
@@ -113,6 +118,9 @@ class diblockClass {
             // New step object containing methods to get next monomer's propagators
             Step_ = new step(NA, NB, m, L, M);
         }
+
+        // Returns the partition function from the most recent call to calc_concs()
+        thrust::complex<double> Q() { return Q_; }
 
 
         // Calculates phi-(r) and phi+(r): w+2*M -> phi-(0), w+3*M -> phi+(0).
@@ -137,7 +145,7 @@ class diblockClass {
             for (i=1; i<N_; i++) Step_->fwd(q1_[i], q1_[i+1], hA_gpu_, i);
 
             // Calculate single-chain partition function using a Thrust reduction sum
-            thrust::complex<double> Q = thrust::reduce(q1_[N_], q1_[N_]+M_) / M_;
+            Q_ = thrust::reduce(q1_[N_], q1_[N_]+M_) / M_;
 
             // zero the concentrations
             thrust::fill(phim_gpu, phim_gpu + 2*M_, 0.0);
@@ -155,9 +163,9 @@ class diblockClass {
             // normalise the concentrations
             // WARNING: Contents of hA_gpu_ and hB_gpu_ get overwritten to save memory
             auto zb = thrust::make_zip_iterator(thrust::make_tuple(phim_gpu, phip_gpu, hA_gpu_, hB_gpu_));
-            thrust::for_each(zb, zb+M_, normalise_functorer(Q, N_));
+            thrust::for_each(zb, zb+M_, normalise_functorer(Q_, N_));
 
-            return thrust::log(Q);
+            return thrust::log(Q_);
         }
 
         // Destructor
