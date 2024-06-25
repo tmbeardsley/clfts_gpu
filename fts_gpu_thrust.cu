@@ -25,6 +25,7 @@
 #include "clfts_params.h"
 #include "file_IO.h"
 #include "langevin_cmplx.h"
+#include "strFuncCmplx.h"
 #include <iomanip>
 using namespace std;
 
@@ -156,7 +157,7 @@ int main()
 
 
 
-
+    strFuncCmplx *Sk = new strFuncCmplx(m, L, M, P->n(), P->XbN());
 
 
 
@@ -178,6 +179,7 @@ int main()
             wm_sq = thrust::transform_reduce(w_gpu.begin(), w_gpu.begin() + M, square_unary_op<thrust::complex<double>>(), wm_sq, thrust::plus<thrust::complex<double>>());
 
             Hf = -lnQ + wm_sq / (chi_b * M) - wp / M;   // Hf = -log(Q)+0.25*chi_b+wm2/chi_b-wp2/(chi_b+2.0/kappa)-wp1;
+
 
             if (it % OUT_FREQ == 0) {
                 cout << it << "\t"
@@ -244,6 +246,8 @@ int main()
 
             Hf = -lnQ + wm_sq / (chi_b * M) - wp / M;
 
+            Sk->sample(w_gpu);
+
             if (it % OUT_FREQ == 0) {
                 cout << it << "\t"
                     << lnQ.real() << "\t" << lnQ.imag() << "\t"
@@ -252,6 +256,8 @@ int main()
                     << wp.real() / M << "\t" << wp.imag() / M << "\t"
                     << Hf.real() << "\t" << Hf.imag() << "\t"
                     << endl;
+
+                Sk->save("Sk_" + to_string(it));
             }
         }
 
@@ -288,6 +294,7 @@ int main()
 
     delete dbc;
     delete P;
+    delete Sk;
     return 0;
 
 }
