@@ -51,37 +51,54 @@ class step {
             GPU_ERR(cufftPlanMany(&qr_to_qk_, 3, m_, NULL, 1, 0, NULL, 1, 0, CUFFT_Z2Z, 2));
         }
 
-        // Calculate propagators for the next monomer given propagators of previous monomer
-        // q_in  = q{i}(r), q^{N+1-i}(r)
-        // q_out = q{i+1}(r), q^{N-i}(r)
-        // h_gpu = hA_gpu, hB_gpu
-        void fwd(thrust::device_vector<thrust::complex<double>>::iterator& q_in,
-            thrust::device_vector<thrust::complex<double>>::iterator& q_out,
-            thrust::device_vector<thrust::complex<double>>::iterator& h_gpu,
-            int i)
+
+
+
+
+
+
+
+        void fwd(   thrust::device_vector<thrust::complex<double>>::iterator& q_in,
+                    thrust::device_vector<thrust::complex<double>>::iterator& q_out,
+                    thrust::device_vector<thrust::complex<double>>::iterator& h_gpu,
+                    int i, bool KSPACE = false)
         {
-            cufftDoubleComplex* V1, * V2;
-            thrust::device_vector<thrust::complex<double>>::iterator h_itr;
+            thrust::device_vector<thrust::complex<double>>::iterator hX = q_in;
 
             // forward FFT q_i(r) and q^\dagger_{N+1-i}(r)
-            V1 = (cufftDoubleComplex*)thrust::raw_pointer_cast(&(q_in[0]));
-            V2 = (cufftDoubleComplex*)thrust::raw_pointer_cast(&(q_out[0]));
-            GPU_ERR(cufftExecZ2Z(qr_to_qk_, V1, V2, cuFFTFORWARD_));
+            cufftDoubleComplex *V1 = (cufftDoubleComplex*)thrust::raw_pointer_cast(&(q_in[0]));
+            cufftDoubleComplex *V2 = (cufftDoubleComplex*)thrust::raw_pointer_cast(&(q_out[0]));
+
+            if (!KSPACE) {
+                GPU_ERR(cufftExecZ2Z(qr_to_qk_, V1, V2, cuFFTFORWARD_));
+                hX = q_out;
+            }
 
             // multiply by g[k]
-            thrust::transform(q_out, q_out + 2*M_, g_gpu_.begin(), q_out, thrust::multiplies<thrust::complex<double>>());
+            thrust::transform(hX, hX + 2*M_, g_gpu_.begin(), q_out, thrust::multiplies<thrust::complex<double>>());
 
             // inverse FFT to obtain convolution integrals
             GPU_ERR(cufftExecZ2Z(qr_to_qk_, V2, V2, cuFFTINVERSE_));
 
             // multiple by hA[r] or hB[r] to obtain q_{i+1}(r)
-            h_itr = (i < NA_) ? h_gpu : h_gpu + M_;
-            thrust::transform(q_out, q_out + M_, h_itr, q_out, thrust::multiplies<thrust::complex<double>>());
+            hX = (i < NA_) ? h_gpu : h_gpu + M_;
+            thrust::transform(q_out, q_out + M_, hX, q_out, thrust::multiplies<thrust::complex<double>>());
 
             // multiple by hA[r] or hB[r] to obtain q^dagger_{N+1-i}(r)
-            h_itr = (i < NB_) ? h_gpu + M_ : h_gpu;
-            thrust::transform(q_out + M_, q_out + 2 * M_, h_itr, q_out + M_, thrust::multiplies<thrust::complex<double>>());
+            hX = (i < NB_) ? h_gpu + M_ : h_gpu;
+            thrust::transform(q_out + M_, q_out + 2 * M_, hX, q_out + M_, thrust::multiplies<thrust::complex<double>>());
+
+            if (KSPACE) GPU_ERR(cufftExecZ2Z(qr_to_qk_, V2, V2, cuFFTFORWARD_));
+
         }
+
+
+        // Provide access to g_gpu for the get_Q_derivatives() function in diblock class()
+        thrust::device_vector<thrust::complex<double>>::iterator g_gpu()
+        {
+            return g_gpu_.begin();
+        }
+
 
         // Destructor
         ~step() {

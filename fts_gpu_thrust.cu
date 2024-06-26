@@ -25,6 +25,7 @@
 #include "clfts_params.h"
 #include "file_IO.h"
 #include "langevin_cmplx.h"
+#include "strFuncCmplx.h"
 #include <iomanip>
 using namespace std;
 
@@ -57,9 +58,10 @@ void write_array_to_file(string file_mask, int step_num, complex<double>* arr, i
 //------------------------------------------------------------
 int main()
 {
-    thrust::complex<double> I = { 0.0,1.0 };
+    thrust::complex<double> I = { 0.0, 1.0 };
     double chi_b, chi_e, zeta, L[3], dt, C, sigma;
     thrust::complex<double> lnQ, wm, wm_sq, wp, Hf;
+    thrust::host_vector<thrust::complex<double>> dQdL(3);
     int    r, N;
     int    it, equil_its, sim_its, sample_freq;
     FILE* out;
@@ -156,7 +158,7 @@ int main()
 
 
 
-
+    strFuncCmplx *Sk = new strFuncCmplx(m, L, M, P->n(), P->XbN());
 
 
 
@@ -179,14 +181,20 @@ int main()
 
             Hf = -lnQ + wm_sq / (chi_b * M) - wp / M;   // Hf = -log(Q)+0.25*chi_b+wm2/chi_b-wp2/(chi_b+2.0/kappa)-wp1;
 
+
             if (it % OUT_FREQ == 0) {
-                cout << it << "\t"
+                std::cout << it << "\t"
                     << lnQ.real() << "\t" << lnQ.imag() << "\t"
                     << wm.real() / M << "\t" << wm.imag() / M << "\t"
                     << wm_sq.real() / M << "\t" << wm_sq.imag() / M << "\t"
                     << wp.real() / M << "\t" << wp.imag() / M << "\t"
                     << Hf.real() << "\t" << Hf.imag() << "\t"
+                    << dbc->Q() << "\t" << dbc->get_Q_derivatives(w_gpu, dQdL)
                     << endl;
+                std::cout   << (L[0]*dQdL[0]/dbc->Q()).real() << "\t"
+                            << (L[1]*dQdL[1]/dbc->Q()).real() << "\t"
+                            << (L[2]*dQdL[2]/dbc->Q()).real() << "\t"
+                            << endl;
             }
         }
 
@@ -244,6 +252,8 @@ int main()
 
             Hf = -lnQ + wm_sq / (chi_b * M) - wp / M;
 
+            Sk->sample(w_gpu);
+
             if (it % OUT_FREQ == 0) {
                 cout << it << "\t"
                     << lnQ.real() << "\t" << lnQ.imag() << "\t"
@@ -251,7 +261,14 @@ int main()
                     << wm_sq.real() / M << "\t" << wm_sq.imag() / M << "\t"
                     << wp.real() / M << "\t" << wp.imag() / M << "\t"
                     << Hf.real() << "\t" << Hf.imag() << "\t"
+                    << dbc->Q() << "\t" << dbc->get_Q_derivatives(w_gpu, dQdL)
                     << endl;
+                std::cout   << (L[0]*dQdL[0]/dbc->Q()).real() << "\t"
+                            << (L[1]*dQdL[1]/dbc->Q()).real() << "\t"
+                            << (L[2]*dQdL[2]/dbc->Q()).real() << "\t"
+                            << endl;
+
+                Sk->save("Sk_" + to_string(it));
             }
         }
 
@@ -288,6 +305,7 @@ int main()
 
     delete dbc;
     delete P;
+    delete Sk;
     return 0;
 
 }
