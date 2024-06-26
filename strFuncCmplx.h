@@ -36,9 +36,8 @@ class strFuncCmplx {
     cufftHandle wr_to_wk_;          // cufft plan transforming w-(r) to w-(k)
     const int cuFFTFORWARD_ = -1;   // Direction of Fourier Transform (used in cufft calls)
 
-    double *K_;                     // Modulus of wavevector k
-    int *P_;                        // Map transforming K_[] into ascending order
-    
+    thrust::host_vector<double> K_; // Modulus of wavevector k
+    thrust::host_vector<int> P_;    // Map transforming K_[] into ascending order
     thrust::device_vector<thrust::complex<double>> wk_gpu_;     // w-(k) on the GPU
     thrust::device_vector<double> S_gpu_;                       // Collects sum of |wk_[k]| resulting from calls to: sample(double *w_gpu)
     thrust::device_vector<int> minusK_gpu_;                     // Given the 1D index, k, then minusK[k] is the 1D index pointing to the negative wavevector in array K[k]
@@ -58,8 +57,8 @@ class strFuncCmplx {
             chi_b_ = chi_b;
             nsamples_ = 0;
             coeff_ = CV/(chi_b*chi_b*M*M);
-            K_ = new double[M];
-            P_ = new int[M];
+            K_.resize(M);
+            P_.resize(M);
 
             // Allocate memory for w-(-k) on the GPU
             minusK_gpu_.resize(M);
@@ -77,7 +76,7 @@ class strFuncCmplx {
             // Populate the wavevector arrays, K_, minusK_gpu
             thrust::host_vector<int> minusK(M);
             //calcK(K_, (int*)thrust::raw_pointer_cast(&(minusK[0])), m, L);
-            calcK(K_, &(minusK[0]), m, L);
+            calcK(&(K_[0]), &(minusK[0]), m, L);
             minusK_gpu_ = minusK;
 
             // Create Permutation iterator for use in wk_sq_functor() functor
@@ -85,7 +84,7 @@ class strFuncCmplx {
 
             // Populate the map, P_, which puts the wavevector moduli, K_, into ascending order
             for (int k=0; k<M; k++) P_[k] = k;
-            sorts::quicksortMap(K_, P_, 0, M-1);
+            sorts::quicksortMap(&(K_[0]), &(P_[0]), 0, M-1);
         }
 
 
@@ -147,8 +146,6 @@ class strFuncCmplx {
 
         // Destructor
         ~strFuncCmplx() {
-            delete[] K_;
-            delete[] P_;
             GPU_ERR(cufftDestroy(wr_to_wk_));
         }
 
