@@ -26,6 +26,7 @@
 #include "file_IO.h"
 #include "langevin_cmplx.h"
 #include "strFuncCmplx.h"
+#include "order_parameter.h"
 #include <iomanip>
 using namespace std;
 
@@ -103,6 +104,8 @@ int main()
     cout << "diblock() created!" << endl;
 
 
+
+
     // declare w on the host and gpu
     hvec_cmplx w(4*M);
     dvec_cmplx w_gpu(4*M);
@@ -131,6 +134,28 @@ int main()
     double K_ATS = 2.8;
     cout << endl << "K_ATS = " << K_ATS << endl << endl;
 
+
+
+
+
+
+
+
+
+
+    cout << "Creating langevin_cmplx()..." << endl;
+    langevin_cmplx Langevin(gen, dt, M, K_ATS, dK_ATS);
+    cout << "langevin_cmplx() created!" << endl;
+
+
+    cout << "Creating strFuncCmplx()..." << endl;
+    strFuncCmplx *Sk = new strFuncCmplx(m, L, M, P->n(), P->XbN());
+    cout << "strFuncCmplx() created!" << endl;
+
+    cout << "Creating order_parameter()..." << endl;
+    order_parameter *Psi = new order_parameter(m, L, M);
+    cout << "order_parameter() created!" << endl;
+
     // titles for outputs
     cout << "it" << "\t"
         << "lnQ.r" << "\t"
@@ -147,18 +172,6 @@ int main()
 
 
 
-
-
-
-
-
-    cout << "Creating langevin_cmplx()..." << endl;
-    langevin_cmplx Langevin(gen, dt, M, K_ATS, dK_ATS);
-    cout << "langevin_cmplx() created!" << endl;
-
-
-
-    strFuncCmplx *Sk = new strFuncCmplx(m, L, M, P->n(), P->XbN());
 
 
 
@@ -189,7 +202,8 @@ int main()
                     << wm_sq.real() / M << "\t" << wm_sq.imag() / M << "\t"
                     << wp.real() / M << "\t" << wp.imag() / M << "\t"
                     << Hf.real() << "\t" << Hf.imag() << "\t"
-                    << dbc->Q() << "\t" << dbc->get_Q_derivatives(w_gpu, dQdL)
+                    << dbc->Q() << "\t" << dbc->get_Q_derivatives(w_gpu, dQdL) << "\t"
+                    << Psi->get_Psi4(w_gpu)
                     << endl;
                 std::cout   << (L[0]*dQdL[0]/dbc->Q()).real() << "\t"
                             << (L[1]*dQdL[1]/dbc->Q()).real() << "\t"
@@ -261,7 +275,8 @@ int main()
                     << wm_sq.real() / M << "\t" << wm_sq.imag() / M << "\t"
                     << wp.real() / M << "\t" << wp.imag() / M << "\t"
                     << Hf.real() << "\t" << Hf.imag() << "\t"
-                    << dbc->Q() << "\t" << dbc->get_Q_derivatives(w_gpu, dQdL)
+                    << dbc->Q() << "\t" << dbc->get_Q_derivatives(w_gpu, dQdL) << "\t"
+                    << Psi->get_Psi4(w_gpu)
                     << endl;
                 std::cout   << (L[0]*dQdL[0]/dbc->Q()).real() << "\t"
                             << (L[1]*dQdL[1]/dbc->Q()).real() << "\t"
@@ -306,6 +321,7 @@ int main()
     delete dbc;
     delete P;
     delete Sk;
+    delete Psi;
     return 0;
 
 }

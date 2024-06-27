@@ -93,7 +93,7 @@ class strFuncCmplx {
 
 
         // Sample norm(w-(k)) 
-        void sample(thrust::device_vector<thrust::complex<double>> w_gpu) {
+        void sample(thrust::device_vector<thrust::complex<double>> &w_gpu) {
             // Transform w-(r) to k-space to get w-(k)
             GPU_ERR(cufftExecZ2Z(wr_to_wk_, (cufftDoubleComplex*)thrust::raw_pointer_cast(&(w_gpu[0])), (cufftDoubleComplex*)thrust::raw_pointer_cast(&(wk_gpu_[0])), cuFFTFORWARD_));
 
