@@ -46,7 +46,8 @@ namespace file_IO {
     }
 
     // Save a host array to file
-    void saveArray(double *arr, std::string fileName, int n, bool append=false) {
+    template <typename T>
+    void saveArray(T *arr, std::string fileName, int n, bool append=false) {
         std::ofstream outstream;
         if (append) outstream.open(fileName,std::ios_base::app);
         else outstream.open(fileName);
