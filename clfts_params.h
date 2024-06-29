@@ -31,7 +31,7 @@ class clfts_params {
     int    sim_its_;            // Number of Langevin steps for statistics
     int    sample_freq_;        // Number of Langevin steps between samples
 
-    //int    save_freq_;          // Number of steps between saving statistics to file
+    int    save_freq_;          // Number of steps between saving statistics to file
     //int    loadType_;           // Whether to load from file or create a new field
 
     // Derived parameters
@@ -72,7 +72,7 @@ class clfts_params {
             std::cout << "equil_its = "     << equil_its_   << std::endl;
             std::cout << "sim_its = "       << sim_its_     << std::endl;
             std::cout << "sample_freq = "   << sample_freq_ << std::endl;
-            //std::cout << "save_freq_ = "    << save_freq_   << std::endl;
+            std::cout << "save_freq_ = "    << save_freq_   << std::endl;
             //std::cout << "loadType_ = "     << loadType_    << std::endl;
             std::cout << "M_ = "            << M_           << std::endl;
             std::cout << "V_ = "            << V_           << std::endl;
@@ -102,7 +102,7 @@ class clfts_params {
         int equil_its() { return equil_its_; }
         int sim_its() { return sim_its_; }
         int sample_freq() { return sample_freq_; }
-        //int save_freq() { return save_freq_; }
+        int save_freq() { return save_freq_; }
         //int loadType() { return loadType_; }
         int M() { return M_; }
         double V() { return V_; }
@@ -110,17 +110,17 @@ class clfts_params {
         double n() { return C_*V_; }                // Total number of polymers in the system
 
 
-        //void saveOutputParams(std::string fileName, bool append=false) {
-        //    double XN_out = chi_b_;
-        //    std::ofstream outstream;
-        //    if (append) outstream.open(fileName,std::ios_base::app);
-        //    else outstream.open(fileName);
-        //    if (isXeN_ == 1) XN_out = XeN_;
-        //    outstream << N_ << " " << NA_ << " " << XN_out << " " << C_ << " " << dt_ << " " << isXeN_ << std::endl;
-        //    outstream << m_[0] << " " << m_[1] << " " << m_[2] << " " << L_[0] << " " << L_[1] << " " << L_[2] << std::endl;
-        //    outstream << equil_its_ << " " << sim_its_ << " " << sample_freq_ << " " << save_freq_ << " " << 1 << std::endl;
-        //    outstream.close();
-        //}
+        void saveOutputParams(std::string fileName, bool append=false) {
+           //double XN_out = chi_b_;
+           std::ofstream outstream;
+           if (append) outstream.open(fileName,std::ios_base::app);
+           else outstream.open(fileName);
+           //if (isXeN_ == 1) XN_out = XeN_;
+           outstream << N_ << " " << NA_ << " " << XeN_ << " " << zeta_  << " " << C_ << " " << dt_ << std::endl;
+           outstream << m_[0] << " " << m_[1] << " " << m_[2] << " " << L_[0] << " " << L_[1] << " " << L_[2] << std::endl;
+           outstream << equil_its_ << " " << sim_its_ << " " << sample_freq_ << " " << save_freq_ << std::endl;
+           outstream.close();
+        }
 
 
 
@@ -143,16 +143,16 @@ class clfts_params {
             std::getline(instream, fline);
             std::stringstream ss(fline);
             try {
-                if (!(ss >> N_))        throw invalid_argument("Cannot read N\n");
-                if (!(ss >> NA_))       throw invalid_argument("Cannot read NA\n");
-                if (!(ss >> XeN_))      throw invalid_argument("Cannot read XeN\n");
-                if (!(ss >> zeta_))     throw invalid_argument("Cannot read zeta\n");
-                if (!(ss >> C_))        throw invalid_argument("Cannot read C\n");
-                if (!(ss >> dt_))       throw invalid_argument("Cannot read dt\n");
+                if (!(ss >> N_))        throw std::invalid_argument("Cannot read N\n");
+                if (!(ss >> NA_))       throw std::invalid_argument("Cannot read NA\n");
+                if (!(ss >> XeN_))      throw std::invalid_argument("Cannot read XeN\n");
+                if (!(ss >> zeta_))     throw std::invalid_argument("Cannot read zeta\n");
+                if (!(ss >> C_))        throw std::invalid_argument("Cannot read C\n");
+                if (!(ss >> dt_))       throw std::invalid_argument("Cannot read dt\n");
             }
             //catch (invalid_argument& e) {
-            catch (const exception& e) {
-                cout << "ERROR => Invalid file parameters: " << e.what() << std::endl;
+            catch (const std::exception& e) {
+                std::cout << "ERROR => Invalid file parameters: " << e.what() << std::endl;
                 exit(1);
             }
 
@@ -162,16 +162,16 @@ class clfts_params {
             ss.clear();
             ss.str(fline);
             try {
-                if (!(ss >> m_[0]))     throw invalid_argument("Cannot read mx\n");
-                if (!(ss >> m_[1]))     throw invalid_argument("Cannot read my\n");
-                if (!(ss >> m_[2]))     throw invalid_argument("Cannot read mz\n");
-                if (!(ss >> L_[0]))     throw invalid_argument("Cannot read Lx\n");
-                if (!(ss >> L_[1]))     throw invalid_argument("Cannot read Ly\n");
-                if (!(ss >> L_[2]))     throw invalid_argument("Cannot read Lz\n");
+                if (!(ss >> m_[0]))     throw std::invalid_argument("Cannot read mx\n");
+                if (!(ss >> m_[1]))     throw std::invalid_argument("Cannot read my\n");
+                if (!(ss >> m_[2]))     throw std::invalid_argument("Cannot read mz\n");
+                if (!(ss >> L_[0]))     throw std::invalid_argument("Cannot read Lx\n");
+                if (!(ss >> L_[1]))     throw std::invalid_argument("Cannot read Ly\n");
+                if (!(ss >> L_[2]))     throw std::invalid_argument("Cannot read Lz\n");
             }
             //catch (invalid_argument& e) {
-            catch (const exception& e) {
-                cout << "ERROR => Invalid file parameters: " << e.what() << std::endl;
+            catch (const std::exception& e) {
+                std::cout << "ERROR => Invalid file parameters: " << e.what() << std::endl;
                 exit(1);
             }
 
@@ -181,13 +181,14 @@ class clfts_params {
             ss.clear();
             ss.str(fline);
             try {
-                if (!(ss >> equil_its_))   throw invalid_argument("Cannot read equil_its\n");
-                if (!(ss >> sim_its_))     throw invalid_argument("Cannot read sim_its\n");
-                if (!(ss >> sample_freq_)) throw invalid_argument("Cannot read sample_freq\n");
+                if (!(ss >> equil_its_))    throw std::invalid_argument("Cannot read equil_its\n");
+                if (!(ss >> sim_its_))      throw std::invalid_argument("Cannot read sim_its\n");
+                if (!(ss >> sample_freq_))  throw std::invalid_argument("Cannot read sample_freq\n");
+                if (!(ss >> save_freq_))    throw std::invalid_argument("Cannot read save_freq\n");
             }
             //catch (invalid_argument& e) {
-            catch (const exception& e) {
-                cout << "ERROR => Invalid file parameters: " << e.what() << std::endl;
+            catch (const std::exception& e) {
+                std::cout << "ERROR => Invalid file parameters: " << e.what() << std::endl;
                 exit(1);
             }
 
