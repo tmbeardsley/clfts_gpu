@@ -6,7 +6,11 @@
 #include <fstream>
 #include <iomanip>
 #include <limits>
+#include <stdexcept>
 #include <cuda.h>
+#include <thrust/host_vector.h>
+#include <thrust/complex.h>
+
 
 namespace file_IO {
 
@@ -32,6 +36,17 @@ namespace file_IO {
             v[r].imag(imag);
         }
         instream.close();
+    }
+
+    template <typename T>
+    void writeCmplxVector(std::string fileName, thrust::complex<T> *arr, int n, bool append=false) {
+        std::ofstream outstream;
+        // write the field to file
+        if (append) outstream.open(fileName,std::ios_base::app);
+        else outstream.open(fileName);
+        outstream.precision(10);
+        for (int r = 0; r < n; r++) outstream << arr[r].real() << "\t" << arr[r].imag() << std::endl;
+        outstream.close();
     }
 
     // Read a double array from file

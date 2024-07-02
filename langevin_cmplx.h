@@ -91,7 +91,7 @@ struct langevin_C_functor
 struct compare_cmplx_value
 {
     __host__ __device__
-        bool operator()(cmplx_dbl a, cmplx_dbl b)
+        bool operator()(thrust::complex<double> a, thrust::complex<double> b)
     {
         return thrust::norm(a) < thrust::norm(b);
     }
@@ -128,7 +128,7 @@ class langevin_cmplx {
     double lam_p_ = 1.0;
 
     public:
-        langevin_cmplx(curandGenerator_t& RNG, double dt, int M, double K_ATS = 1.0, double dK_ATS = 1E-4) {
+        langevin_cmplx(curandGenerator_t& RNG, double dt, int M, double K_ATS = 2.8, double dK_ATS = 1E-4) {
             M_ = M;
             dt_ = dt;
 
@@ -141,8 +141,6 @@ class langevin_cmplx {
 
             lambda1_.resize(2*M);
             w_cpy_.resize(2*M);
-
-
         }
 
         ~langevin_cmplx() {
@@ -162,8 +160,6 @@ class langevin_cmplx {
             thrust::complex<double> lnQ;
             double G_max_abs = -1;
 
-            //cout << "Performing step_wm_wp(...)" << endl;
-
             // set adaptive time step = nominal time step initially
             adt_ = dt_;
 
@@ -172,25 +168,19 @@ class langevin_cmplx {
 
             // get the forcing terms for w- and w+
             calculate_force(lambda1_, w_gpu, XbN, zeta);
-            //cout << "lambda1_sum = " << thrust::reduce(lambda1_.begin(), lambda1_.end()) << endl;
 
             // get the largest absolute value of the force
             if (RTN_GMAX || ATS) {
                 thrust::complex<double> lam_max = *(thrust::max_element(lambda1_.begin(), lambda1_.end(), compare_cmplx_value()));
                 G_max_abs = thrust::abs(lam_max);
-                //cout << "G_max_abs = " << G_max_abs << endl;
             }
 
             // calculate size of the adaptive time step
             if (ATS) adt_ = (K_ATS_ / G_max_abs) * dt_;
-            //cout << "adt_ = " << adt_ << endl;
-            //cout << "K_ATS_ = " << K_ATS_ << endl;
 
             // get scaled noise for langevin step
             curandGenerateNormalDouble(gen, (double*)thrust::raw_pointer_cast(&(noise_vec_[0])), M_, 0.0, sigma*sqrt(lam_m_*adt_/dt_));
             curandGenerateNormalDouble(gen, (double*)thrust::raw_pointer_cast(&(noise_vec_[M_])), M_, 0.0, sigma*sqrt(lam_p_*adt_/dt_));
-            //cout << "noiseWm_sum = " << thrust::reduce(noise_vec_.begin(), noise_vec_.begin() + M_) << endl;
-            //cout << "noiseWp_sum = " << thrust::reduce(noise_vec_.begin() + M_, noise_vec_.begin() + 2*M_) << endl;
 
             // perform predictor langevin step (pass the pre-computed forcing terms)
             auto zP = thrust::make_zip_iterator(
@@ -221,14 +211,14 @@ class langevin_cmplx {
                             w_cpy_.begin() + M_));
             thrust::for_each(zC, zC + M_, langevin_C_functor(XbN, adt_, lam_m_, lam_p_, zeta));
 
-            // calculate phi- and phi+ from predicted fields
-            lnQ = dbc->calc_concs(w_gpu);
-
             // get the average of w+
             thrust::complex<double> wp_avg = thrust::reduce(w_gpu.begin() + M_, w_gpu.begin() + 2*M_) / M_;
 
             // subtract <w+> from the w+ field
             thrust::transform(w_gpu.begin() + M_, w_gpu.begin() + 2*M_, thrust::make_constant_iterator(wp_avg), w_gpu.begin() + M_, thrust::minus<thrust::complex<double>>());
+
+            // calculate phi- and phi+ from predicted fields
+            lnQ = dbc->calc_concs(w_gpu);
 
             // Update K_ATS (controls size of updates to adaptive time step)
             if (adapt_K_ATS) K_ATS_ += sgn(dt_ - adt_) * dK_ATS_;
