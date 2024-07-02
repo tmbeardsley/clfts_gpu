@@ -30,9 +30,7 @@ class clfts_params {
     int    equil_its_;          // Number of Langevin steps for equilibration
     int    sim_its_;            // Number of Langevin steps for statistics
     int    sample_freq_;        // Number of Langevin steps between samples
-
     int    save_freq_;          // Number of steps between saving statistics to file
-    //int    loadType_;           // Whether to load from file or create a new field
 
     // Derived parameters
     int    NB_;                 // Length of polymer B-block
@@ -62,7 +60,6 @@ class clfts_params {
             std::cout << "zeta = "          << zeta_        << std::endl;
             std::cout << "C = "             << C_           << std::endl;
             std::cout << "dt = "            << dt_          << std::endl;
-            //std::cout << "isXeN = "         << isXeN_       << std::endl;
             std::cout << "m[0] = "          << m_[0]        << std::endl;
             std::cout << "m[1] = "          << m_[1]        << std::endl;
             std::cout << "m[2] = "          << m_[2]        << std::endl;
@@ -73,7 +70,6 @@ class clfts_params {
             std::cout << "sim_its = "       << sim_its_     << std::endl;
             std::cout << "sample_freq = "   << sample_freq_ << std::endl;
             std::cout << "save_freq_ = "    << save_freq_   << std::endl;
-            //std::cout << "loadType_ = "     << loadType_    << std::endl;
             std::cout << "M_ = "            << M_           << std::endl;
             std::cout << "V_ = "            << V_           << std::endl;
             std::cout << "sigma_ = "        << sigma_       << std::endl;
@@ -88,7 +84,6 @@ class clfts_params {
         double zeta() { return zeta_; }
         double C() { return C_; }
         double dt() { return dt_; }
-        //int isXeN() { return isXeN_; }
         int mx() { return m_[0]; }
         int my() { return m_[1]; }
         int mz() { return m_[2]; }
@@ -103,7 +98,6 @@ class clfts_params {
         int sim_its() { return sim_its_; }
         int sample_freq() { return sample_freq_; }
         int save_freq() { return save_freq_; }
-        //int loadType() { return loadType_; }
         int M() { return M_; }
         double V() { return V_; }
         double sigma() { return sigma_; }
@@ -111,11 +105,9 @@ class clfts_params {
 
 
         void saveOutputParams(std::string fileName, bool append=false) {
-           //double XN_out = chi_b_;
            std::ofstream outstream;
            if (append) outstream.open(fileName,std::ios_base::app);
            else outstream.open(fileName);
-           //if (isXeN_ == 1) XN_out = XeN_;
            outstream << N_ << " " << NA_ << " " << XeN_ << " " << zeta_  << " " << C_ << " " << dt_ << std::endl;
            outstream << m_[0] << " " << m_[1] << " " << m_[2] << " " << L_[0] << " " << L_[1] << " " << L_[2] << std::endl;
            outstream << equil_its_ << " " << sim_its_ << " " << sample_freq_ << " " << save_freq_ << std::endl;
@@ -169,7 +161,6 @@ class clfts_params {
                 if (!(ss >> L_[1]))     throw std::invalid_argument("Cannot read Ly\n");
                 if (!(ss >> L_[2]))     throw std::invalid_argument("Cannot read Lz\n");
             }
-            //catch (invalid_argument& e) {
             catch (const std::exception& e) {
                 std::cout << "ERROR => Invalid file parameters: " << e.what() << std::endl;
                 exit(1);
@@ -186,7 +177,6 @@ class clfts_params {
                 if (!(ss >> sample_freq_))  throw std::invalid_argument("Cannot read sample_freq\n");
                 if (!(ss >> save_freq_))    throw std::invalid_argument("Cannot read save_freq\n");
             }
-            //catch (invalid_argument& e) {
             catch (const std::exception& e) {
                 std::cout << "ERROR => Invalid file parameters: " << e.what() << std::endl;
                 exit(1);
@@ -196,15 +186,6 @@ class clfts_params {
             // Redefine variables to contain and integer number of sample_freq_ periods
             equil_its_ = (equil_its_/sample_freq_)*sample_freq_;
             sim_its_ = (sim_its_/sample_freq_)*sample_freq_;  
-
-            //// Transform from Xe to Xb if necessary
-            //double z_inf = z_inf_discrete(L_, m_, N_, C_*C_);
-            //if (isXeN_ == 1) {
-            //    XeN_ = chi_b_;
-            //    chi_b_ = chi_b_/z_inf;
-            //} else {
-            //    XeN_ = chi_b_*z_inf;
-            //}
 
             // Transform from Xe to Xb
             XbN_ = XeN_ / z_inf_discrete_compressible(L_, m_, N_, C_, zeta_, 20);
@@ -221,8 +202,7 @@ class clfts_params {
         }
 
         double z_inf_discrete_compressible(std::vector<double>& L, std::vector<int>& m, int N, double C, double zeta, int steps = 80) {
-            return z_inf_discrete(L, m, N, C * C) + dz_inf_discrete_compressible(L, m, N, C, 1.0 / zeta, 20);
-            //return z_inf_discrete(L, m, N, C * C) + 0.028807;
+            return z_inf_discrete(L, m, N, C * C) + dz_inf_discrete_compressible(L, m, N, C, 1.0 / zeta);
         }
 
         // Calculate incompressible z_infinity (discrete chain)

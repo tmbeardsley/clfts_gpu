@@ -11,7 +11,19 @@
 #include "langevin_cmplx.h"
 #include "strFuncCmplx.h"
 #include "order_parameter.h"
+#include "minusK_lookup.h"
 
+
+// square<T> computes the square of a number f(x) -> x*x
+template <typename T>
+struct square_op
+{
+    __host__ __device__
+    T operator()(T a)
+    {
+        return a*a;
+    }
+};
 
 
 class clfts_simulation {
@@ -24,6 +36,7 @@ class clfts_simulation {
     strFuncCmplx *Sk_;                                          // Object used for calculating the structure function
     order_parameter *Psi_;                                      // Object used to calculate the order parameter
     curandGenerator_t RNG_;                                     // Random number generator for the GPU
+    minusK_lookup *minusK_lookup_;                              // Object holding the lookup table minusK(k)
     int M_;                                                     // Total number of field mesh points (constant - contained in lfts_params object but copied for tidier code)
     const int OUT_FREQ = 100;                                   // How often to output instantaneous values to screen during simulation
 
@@ -55,40 +68,33 @@ class clfts_simulation {
             w_gpu_.resize(4*M_);
             w_.resize(4*M_);
 
-            // Create a new diblock object
+            std::cout << "\nCreating minusK_lookup() object..." << std::endl;
+            minusK_lookup_ = new minusK_lookup(&(P_->m()[0]));
+
             std::cout << "\nCreating diblockClass() object..." << std::endl;
-            dbc_ = new diblockClass(P_->NA(), P_->NB(), &(P_->m()[0]), &(P_->L()[0]), M_);
+            dbc_ = new diblockClass(P_->NA(), P_->NB(), &(P_->m()[0]), &(P_->L()[0]), M_, &(minusK_lookup_->minusK_gpu_));
 
-            // Set up a langevin object to update w-(r) and w+(r) at each step
             std::cout << "\nCreating Langevin() object..." << std::endl;
-            double K_ATS = 2.8, dK_ATS = 1E-4;
-            Langevin_ = new langevin_cmplx(RNG_, P_->dt(), M_, K_ATS, dK_ATS);
+            Langevin_ = new langevin_cmplx(RNG_, P_->dt(), M_);
 
-            // Set up a strFuncCmplx object to keep track of the structure function
-            cout << "\nCreating strFuncCmplx() object..." << endl;
-            Sk_ = new strFuncCmplx(&(P_->m()[0]), &(P_->L()[0]), M_, P_->n(), P_->XbN());
+            std::cout << "\nCreating strFuncCmplx() object..." << std::endl;
+            Sk_ = new strFuncCmplx(&(P_->m()[0]), &(P_->L()[0]), M_, P_->n(), P_->XbN(), &(minusK_lookup_->minusK_gpu_));
 
-            // Set up an order_parameter object to keep track of the order parameter
-            cout << "\nCreating order_parameter() object..." << endl;
-            Psi_ = new order_parameter(&(P_->m()[0]), &(P_->L()[0]), M_);
+            std::cout << "\nCreating order_parameter() object..." << std::endl;
+            Psi_ = new order_parameter(&(P_->m()[0]), &(P_->L()[0]), M_, &(minusK_lookup_->minusK_gpu_));
 
             // Read w-[r] and w+[r] from the input file
-            // if (P_->loadType() == 1) { 
-            //     std::cout << "loading input field..." << std::endl;
-            //     file_IO::readArray(w, inputFile, 2*M_, 3);
             thrust::host_vector<thrust::complex<double>> w(2*M_);
             file_IO::readCmplxVector(w, inputFile, 2*M_, 3);
-            // }
-            // else generate_field(w, P_->loadType());
 
             // Copy w-(r) and w+(r) from host to GPU
             thrust::copy(w.begin(), w.end(), w_gpu_.begin());
 
             // Perform an initial mix to get phi-(r) and phi+(r) from the input fields
             std::cout << "\nCalculating phi-(r) and phi+(r)..." << std::endl;
-            std::cout << "lnQ_orig = "
+            std::cout << "\nlnQ_orig = "
                       << dbc_->calc_concs(w_gpu_) 
-                      << "\n";
+                      << "\n\n";
 
             // Output initial fields
             w_ = w_gpu_;
@@ -105,6 +111,7 @@ class clfts_simulation {
             delete Langevin_;
             delete Psi_;
             delete P_;
+            delete minusK_lookup_;
         }
 
 
@@ -113,9 +120,11 @@ class clfts_simulation {
         void equilibrate() {
             int it = 0;
 
+            std::cout << output_titles() << std::endl;
+
             for (it=1; it<=P_->equil_its(); it++) {
                 // Perform a Langevin step to update w-(r) and w+(r)
-                Langevin_->step_wm_wp(w_gpu_, dbc_, RNG_, P_->sigma(), P_->XbN(), P_->zeta(), true, true, true);
+                Langevin_->step_wm_wp(w_gpu_, dbc_, RNG_, P_->sigma(), P_->XbN(), P_->zeta(), true, true, false);
 
                 if (it % OUT_FREQ == 0) instantaneous_outputs(it, w_gpu_.begin());
 
@@ -131,20 +140,25 @@ class clfts_simulation {
             w_ = w_gpu_;
             saveStdOutputFile("w_eq_" + std::to_string(it-1), &(w_[0]));
             file_IO::writeCmplxVector("phi_eq_" + std::to_string(it-1), &(w_[2*M_]), 2*M_);
+            std::cout << "\nK_ATS = " + std::to_string(Langevin_->K_ATS()) << "\n\n";
         }
 
 
 
         // Statistics loop, during which statistics are sampled
         void statistics() {
+            thrust::host_vector<thrust::complex<double>> dQdL(3);
             int it = 0;
+
+            std::cout << output_titles() << std::endl;
 
             for (it=1; it<=P_->sim_its(); it++) {
                 // Perform a Langevin step to update w-(r) and w+(r)
-                Langevin_->step_wm_wp(w_gpu_, dbc_, RNG_, P_->sigma(), P_->XbN(), P_->zeta(), true, true, true);
+                Langevin_->step_wm_wp(w_gpu_, dbc_, RNG_, P_->sigma(), P_->XbN(), P_->zeta(), false, true, false);
 
                 if (it%P_->sample_freq()==0) {
                     Sk_->sample(w_gpu_);
+                    dbc_->get_Q_derivatives(w_gpu_, dQdL);
                 }
 
                 if (it % OUT_FREQ == 0) instantaneous_outputs(it, w_gpu_.begin());
@@ -154,7 +168,7 @@ class clfts_simulation {
                     w_ = w_gpu_;
                     saveStdOutputFile("w_st_" + std::to_string(it), &(w_[0]));
                     file_IO::writeCmplxVector("phi_st_" + std::to_string(it), &(w_[2*M_]), 2*M_);
-                    Sk_->save("Sk_" + to_string(it));
+                    Sk_->save("Sk_" + std::to_string(it));
                 }
 
             }
@@ -162,6 +176,7 @@ class clfts_simulation {
             w_ = w_gpu_;
             saveStdOutputFile("w_st_" + std::to_string(it-1), &(w_[0]));
             file_IO::writeCmplxVector("phi_st_" + std::to_string(it-1), &(w_[2*M_]), 2*M_);
+            std::cout << "\n";
         }
 
 
@@ -178,22 +193,25 @@ class clfts_simulation {
             return -lnQ + 0.25*XbN + wm_sq/XbN - wp_sq/(XbN + 2.0*zeta) - wp;
         }
 
+        std::string output_titles() {
+            return "it\tln(Q)\t<w-(r)>\t<w-(r)^2>\t<w+(r)>\t<w+(r)^2>\tH\tPsi";
+        }
+
         void instantaneous_outputs(int it, thrust::device_vector<thrust::complex<double>>::iterator w_gpu_itr) {
             thrust::complex<double> lnQ, wm, wp, wm_sq, wp_sq, H, ZERO_cmplx={0.0, 0.0};
-            thrust::host_vector<thrust::complex<double>> dQdL(3);
             lnQ = thrust::log(dbc_->Q());
             wm = thrust::reduce(w_gpu_itr, w_gpu_itr + M_) / M_;
             wp = thrust::reduce(w_gpu_itr + M_, w_gpu_itr + 2*M_) / M_;
-            wm_sq = thrust::transform_reduce(w_gpu_itr, w_gpu_itr + M_, square_unary_op<thrust::complex<double>>(), ZERO_cmplx, thrust::plus<thrust::complex<double>>()) / M_;
-            wp_sq = thrust::transform_reduce(w_gpu_itr + M_, w_gpu_itr + 2*M_, square_unary_op<thrust::complex<double>>(), ZERO_cmplx, thrust::plus<thrust::complex<double>>()) / M_;
+            wm_sq = thrust::transform_reduce(w_gpu_itr, w_gpu_itr + M_, square_op<thrust::complex<double>>(), ZERO_cmplx, thrust::plus<thrust::complex<double>>()) / M_;
+            wp_sq = thrust::transform_reduce(w_gpu_itr + M_, w_gpu_itr + 2*M_, square_op<thrust::complex<double>>(), ZERO_cmplx, thrust::plus<thrust::complex<double>>()) / M_;
             H = get_H(lnQ, wm_sq, wp_sq, wp, P_->XbN(), P_->zeta());
             std::cout   << it << "\t"
                         << lnQ << "\t"
                         << wm << "\t"
                         << wm_sq << "\t"
                         << wp << "\t"
+                        << wp_sq << "\t"
                         << H << "\t"
-                        << dbc_->get_Q_derivatives(w_gpu_, dQdL) << "\t"
                         << Psi_->get_Psi4(w_gpu_)
                         << std::endl;
         } 

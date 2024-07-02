@@ -40,7 +40,6 @@ class strFuncCmplx {
     thrust::host_vector<int> P_;    // Map transforming K_[] into ascending order
     thrust::device_vector<thrust::complex<double>> wk_gpu_;     // w-(k) on the GPU
     thrust::device_vector<double> S_gpu_;                       // Collects sum of |wk_[k]| resulting from calls to: sample(double *w_gpu)
-    thrust::device_vector<int> minusK_gpu_;                     // Given the 1D index, k, then minusK[k] is the 1D index pointing to the negative wavevector in array K[k]
     thrust::permutation_iterator<   thrust::device_vector<thrust::complex<double>>::iterator, 
                                     thrust::device_vector<int>::iterator
                                 >   minusK_iter_;               // Permutation iterator for multiplying wk[k] by wk[minusK[k]] on the GPU
@@ -49,9 +48,11 @@ class strFuncCmplx {
     double chi_b_;
     int M_;
 
+    
+
     public:
         // Constructor
-        strFuncCmplx(int *m, double *L, int M, double CV, double chi_b, double dK = 1E-5) {
+        strFuncCmplx(int *m, double *L, int M, double CV, double chi_b, thrust::device_vector<int> *minusK_gpu, double dK = 1E-5) {
             dK_ = dK;
             M_ = M;
             chi_b_ = chi_b;
@@ -59,9 +60,6 @@ class strFuncCmplx {
             coeff_ = CV/(chi_b*chi_b*M*M);
             K_.resize(M);
             P_.resize(M);
-
-            // Allocate memory for w-(-k) on the GPU
-            minusK_gpu_.resize(M);
 
             // Allocate memory for w-(k) on the GPU
             wk_gpu_.resize(M);
@@ -73,14 +71,11 @@ class strFuncCmplx {
             // Create a cufft plan for the Fourier transform on the GPU
             GPU_ERR(cufftPlan3d(&wr_to_wk_, m[0], m[1], m[2], CUFFT_Z2Z));
 
-            // Populate the wavevector arrays, K_, minusK_gpu
-            thrust::host_vector<int> minusK(M);
-            //calcK(K_, (int*)thrust::raw_pointer_cast(&(minusK[0])), m, L);
-            calcK(&(K_[0]), &(minusK[0]), m, L);
-            minusK_gpu_ = minusK;
+            // Populate the wavevector array, K_.
+            calcK(&(K_[0]), m, L);
 
             // Create Permutation iterator for use in wk_sq_functor() functor
-            minusK_iter_ = thrust::make_permutation_iterator(wk_gpu_.begin(), minusK_gpu_.begin());
+            minusK_iter_ = thrust::make_permutation_iterator(wk_gpu_.begin(), (*minusK_gpu).begin());
 
             // Populate the map, P_, which puts the wavevector moduli, K_, into ascending order
             for (int k=0; k<M; k++) P_[k] = k;
@@ -144,6 +139,7 @@ class strFuncCmplx {
             out_stream.close();
         }
 
+
         // Destructor
         ~strFuncCmplx() {
             GPU_ERR(cufftDestroy(wr_to_wk_));
@@ -154,28 +150,23 @@ class strFuncCmplx {
 
     private:
         // Calculate the wavevector moduli and store in K[]
-        void calcK(double *K, int *minusK, int *m, double *L) {
+        void calcK(double *K, int *m, double *L) { //int *minusK, int *m, double *L) {
             int K0, K1, K2, k;
-            int mK0, mK1, mK2;
             double kx_sq, ky_sq, kz_sq;
 
             for (int k0=-(m[0]-1)/2; k0<=m[0]/2; k0++) {
                 K0 = (k0<0)?(k0+m[0]):k0;
-                mK0 = (k0>0)?(-k0+m[0]):-k0;
                 kx_sq = k0*k0/(L[0]*L[0]);
 
                 for (int k1=-(m[1]-1)/2; k1<=m[1]/2; k1++) {
                     K1 = (k1<0)?(k1+m[1]):k1;
-                    mK1 = (k1>0)?(-k1+m[1]):-k1;
                     ky_sq = k1*k1/(L[1]*L[1]);
 
                     for (int k2=-(m[2]-1)/2; k2<=m[2]/2; k2++) {
                         K2 = (k2<0)?(k2+m[2]):k2;
-                        mK2 = (k2>0)?(-k2+m[2]):-k2;
                         kz_sq = k2*k2/(L[2]*L[2]);
 
                         k = K2+m[2]*(K1+m[1]*K0);
-                        minusK[k] = mK2+m[2]*(mK1+m[1]*mK0);
                         K[k] = 2*M_PI*pow(kx_sq+ky_sq+kz_sq,0.5); 
                     }
                 }

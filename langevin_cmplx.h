@@ -91,7 +91,7 @@ struct langevin_C_functor
 struct compare_cmplx_value
 {
     __host__ __device__
-        bool operator()(cmplx_dbl a, cmplx_dbl b)
+        bool operator()(thrust::complex<double> a, thrust::complex<double> b)
     {
         return thrust::norm(a) < thrust::norm(b);
     }
@@ -128,7 +128,7 @@ class langevin_cmplx {
     double lam_p_ = 1.0;
 
     public:
-        langevin_cmplx(curandGenerator_t& RNG, double dt, int M, double K_ATS = 1.0, double dK_ATS = 1E-4) {
+        langevin_cmplx(curandGenerator_t& RNG, double dt, int M, double K_ATS = 2.8, double dK_ATS = 1E-4) {
             M_ = M;
             dt_ = dt;
 
@@ -177,8 +177,6 @@ class langevin_cmplx {
 
             // calculate size of the adaptive time step
             if (ATS) adt_ = (K_ATS_ / G_max_abs) * dt_;
-            //cout << "adt_ = " << adt_ << endl;
-            //cout << "K_ATS_ = " << K_ATS_ << endl;
 
             // get scaled noise for langevin step
             curandGenerateNormalDouble(gen, (double*)thrust::raw_pointer_cast(&(noise_vec_[0])), M_, 0.0, sigma*sqrt(lam_m_*adt_/dt_));

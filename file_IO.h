@@ -39,13 +39,13 @@ namespace file_IO {
     }
 
     template <typename T>
-    void writeCmplxVector(string fileName, thrust::complex<T> *arr, int n, bool append=false) {
-        ofstream outstream;
+    void writeCmplxVector(std::string fileName, thrust::complex<T> *arr, int n, bool append=false) {
+        std::ofstream outstream;
         // write the field to file
         if (append) outstream.open(fileName,std::ios_base::app);
         else outstream.open(fileName);
         outstream.precision(10);
-        for (int r = 0; r < n; r++) outstream << arr[r].real() << "\t" << arr[r].imag() << endl;
+        for (int r = 0; r < n; r++) outstream << arr[r].real() << "\t" << arr[r].imag() << std::endl;
         outstream.close();
     }
 

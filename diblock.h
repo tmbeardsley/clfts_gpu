@@ -8,7 +8,7 @@
 #include <cufft.h>
 #include <vector>
 #include <math.h>
-#include "GPUkernels.h"
+//#include "GPUkernels.h"
 #include "GPUerror.h"
 #include "step.h"
 #include <thrust/reduce.h>
@@ -87,7 +87,7 @@ class diblockClass {
 
     thrust::host_vector<thrust::device_vector<thrust::complex<double>>::iterator> q1_;      // Array of pointers to q_{j=i}(r), where j is the monomer index and i is array index
     thrust::host_vector<thrust::device_vector<thrust::complex<double>>::iterator> q2_;      // Array of pointers to q^_{j=N+1-i}(r), where j is the monomer index and i is array index
-    thrust::device_vector<int> minusK_gpu_;                                                 // Given the 1D index, k, then minusK[k] is the 1D index pointing to the negative wavevector in array K[k]
+    thrust::device_vector<int> *minusK_gpu_;                                                // Given the 1D index, k, then minusK[k] is the 1D index pointing to the negative wavevector in array K[k]
     thrust::device_vector<double> c_dQdL_gpu_;                                              // Constants for use in calculation of dQ/dL
     thrust::device_vector<thrust::complex<double>> SUM_gpu_;                                //
     cufftHandle FFT_plan_;
@@ -105,7 +105,7 @@ class diblockClass {
 
     public:
         // Constructor
-        diblockClass(int NA, int NB, int* m, double* L, int M)
+        diblockClass(int NA, int NB, int* m, double* L, int M, thrust::device_vector<int> *minusK_gpu)
         {
             M_ = M;
             NA_ = NA;
@@ -134,15 +134,18 @@ class diblockClass {
             }
 
             // Allocate memory for w-(-k) and c_dQdL on the GPU
-            minusK_gpu_.resize(M);
+            //minusK_gpu_.resize(M);
             c_dQdL_gpu_.resize(3*M);
             SUM_gpu_.resize(M);
 
-            thrust::host_vector<int> minusK(M);
+            //thrust::host_vector<int> minusK(M);
             thrust::host_vector<double> c_dQdL(3*M);
-            calcK(&(c_dQdL[0]), &(minusK[0]), m, &(L_[0]));
-            minusK_gpu_ = minusK;
+            calcK(&(c_dQdL[0]), m, &(L_[0]));
+            //minusK_gpu_ = minusK;
             c_dQdL_gpu_ = c_dQdL;
+
+            // Keep a pointer to the minusK_gpu lookup table
+            minusK_gpu_ = minusK_gpu;
 
             // Set up a cuda plan
             GPU_ERR(cufftPlanMany(&FFT_plan_,3,m,NULL,1,0,NULL,1,0, CUFFT_Z2Z,2));
@@ -243,7 +246,7 @@ class diblockClass {
 
             // 
             for (i=1; i<N_; i++) { 
-                auto minusK_iter_ = thrust::make_permutation_iterator(q2_[i+1], minusK_gpu_.begin()); 
+                auto minusK_iter_ = thrust::make_permutation_iterator(q2_[i+1], (*minusK_gpu_).begin()); 
                 auto z2 = thrust::make_zip_iterator(thrust::make_tuple(SUM_gpu_.begin(), q1_[i], minusK_iter_));
                 thrust::for_each(z2, z2+M_, sum_prod_functor());
             }
@@ -273,24 +276,24 @@ class diblockClass {
 
     private:
         // Calculate the wavevector moduli and store in K[]
-        void calcK(double *c_dQdL, int *minusK, int *m, double *L) {
+        void calcK(double *c_dQdL, int *m, double *L) {
             int K0, K1, K2, k;
-            int mK0, mK1, mK2;
+            //int mK0, mK1, mK2;
 
             for (int k0=-(m[0]-1)/2; k0<=m[0]/2; k0++) {
                 K0 = (k0<0)?(k0+m[0]):k0;
-                mK0 = (k0>0)?(-k0+m[0]):-k0;
+                //mK0 = (k0>0)?(-k0+m[0]):-k0;
 
                 for (int k1=-(m[1]-1)/2; k1<=m[1]/2; k1++) {
                     K1 = (k1<0)?(k1+m[1]):k1;
-                    mK1 = (k1>0)?(-k1+m[1]):-k1;
+                    //mK1 = (k1>0)?(-k1+m[1]):-k1;
 
                     for (int k2=-(m[2]-1)/2; k2<=m[2]/2; k2++) {
                         K2 = (k2<0)?(k2+m[2]):k2;
-                        mK2 = (k2>0)?(-k2+m[2]):-k2;
+                        //mK2 = (k2>0)?(-k2+m[2]):-k2;
 
                         k = K2+m[2]*(K1+m[1]*K0);
-                        minusK[k] = mK2+m[2]*(mK1+m[1]*mK0);
+                        //minusK[k] = mK2+m[2]*(mK1+m[1]*mK0);
 
                         c_dQdL[k] = (4*M_PI*M_PI*k0*k0)*M_/(3*N_);
                         c_dQdL[k+M_] = (4*M_PI*M_PI*k1*k1)*M_/(3*N_);
