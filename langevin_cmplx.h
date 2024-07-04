@@ -211,12 +211,6 @@ class langevin_cmplx {
                             w_cpy_.begin() + M_));
             thrust::for_each(zC, zC + M_, langevin_C_functor(XbN, adt_, lam_m_, lam_p_, zeta));
 
-            // get the average of w+
-            thrust::complex<double> wp_avg = thrust::reduce(w_gpu.begin() + M_, w_gpu.begin() + 2*M_) / M_;
-
-            // subtract <w+> from the w+ field
-            thrust::transform(w_gpu.begin() + M_, w_gpu.begin() + 2*M_, thrust::make_constant_iterator(wp_avg), w_gpu.begin() + M_, thrust::minus<thrust::complex<double>>());
-
             // calculate phi- and phi+ from predicted fields
             lnQ = dbc->calc_concs(w_gpu);
 
