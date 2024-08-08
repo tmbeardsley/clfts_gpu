@@ -1,5 +1,5 @@
 // #############################################################################
-// A class for dealing with the L-FTS simulation input parameters.
+// A class for dealing with the CL-FTS simulation input parameters.
 // Reads the input parameters from file. Not fully encapsulated as *m and 
 // *L are exposed for convenience. Will act as a helper class that  
 // automatically updates the values of derived parameters in future code 
