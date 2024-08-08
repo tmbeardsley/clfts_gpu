@@ -1,7 +1,7 @@
-// ######################################################
-// Provides public method: calc_concs(double *w_gpu), 
-// to calculate concentrations (used in Anderson mixing)
-// ######################################################
+// ###########################################################################################
+// Provides public method: calc_concs(thrust::device_vector<thrust::complex<double>> &w_gpu), 
+// to calculate concentrations
+// ###########################################################################################
 
 #pragma once
 #include <cuda.h>
