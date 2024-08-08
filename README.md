@@ -19,7 +19,7 @@ Line 3: <em>n_eq n_st n_smpl save_freq</em><br>
 Lines 4->(M+3): REAL[W-(r)] IMAG[W-(r)]<br>
 Lines (M+4)->(2M+3): REAL[W+(r)] IMAG[W+(r)]<br>
 
-Notes:
+<b>Notes:</b><br>
 M = (mx\*my\*mz) is the total number of mesh points, such that the proceeding 2*M lines of the file can hold W-(r) and w+(r) fields to load.<br>
 A real-space position r = (x,y,z) corresponds to a mesh point position r_m = (i,j,k), where i=0->mx-1, j=0->my-1 and k=0->mz-1 are integers. The elements of the fields, W-(r) and W+(r), are then written in ascending order of the row-major index: p = mx\*(i\*my+j)+k.<br>
 
