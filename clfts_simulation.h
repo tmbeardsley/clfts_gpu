@@ -156,6 +156,7 @@ class clfts_simulation {
                 // Perform a Langevin step to update w-(r) and w+(r)
                 Langevin_->step_wm_wp(w_gpu_, dbc_, RNG_, P_->sigma(), P_->XbN(), P_->zeta(), false, true, false);
 
+                // Sample the structure function and get the instantaneous values of dQ/dL
                 if (it%P_->sample_freq()==0) {
                     Sk_->sample(w_gpu_);
                     dbc_->get_Q_derivatives(w_gpu_, dQdL);
@@ -189,6 +190,7 @@ class clfts_simulation {
             file_IO::writeCmplxVector(fileName, arr, 2*M_, true);
         }
 
+        // Calculate the Hamiltonian
         thrust::complex<double> get_H(thrust::complex<double> lnQ, thrust::complex<double> wm_sq, thrust::complex<double> wp_sq, thrust::complex<double> wp, double XbN, double zeta) {
             return -lnQ + 0.25*XbN + wm_sq/XbN - wp_sq/(XbN + 2.0*zeta) - wp;
         }
@@ -197,6 +199,7 @@ class clfts_simulation {
             return "it\tln(Q)\t<w-(r)>\t<w-(r)^2>\t<w+(r)>\t<w+(r)^2>\tH\tPsi";
         }
 
+        // Write instantaneous outputs to screen
         void instantaneous_outputs(int it, thrust::device_vector<thrust::complex<double>>::iterator w_gpu_itr) {
             thrust::complex<double> lnQ, wm, wp, wm_sq, wp_sq, H, ZERO_cmplx={0.0, 0.0};
             lnQ = thrust::log(dbc_->Q());

@@ -32,12 +32,12 @@ struct get_lambda_functor
     }
 };
 
-//wm=get<0>(t) Y
-//wp=get<1>(t) Y
-//sym_noise=get<2>(t) Y
-//isym_noise=get<3>(t) Y
-//lambda1_m=get<4>(t) Y
-//lambda1_p=get<5>(t) Y
+//wm=get<0>(t)
+//wp=get<1>(t)
+//sym_noise=get<2>(t)
+//isym_noise=get<3>(t)
+//lambda1_m=get<4>(t)
+//lambda1_p=get<5>(t)
 struct langevin_P_functor
 {
     const double dt_;
@@ -124,6 +124,7 @@ class langevin_cmplx {
     double K_ATS_;
     double dK_ATS_;
 
+    // Mobility factors
     double lam_m_ = 1.0;
     double lam_p_ = 1.0;
 
@@ -139,7 +140,10 @@ class langevin_cmplx {
             // Allocate memory for Gaussian random noise on the GPU
             noise_vec_.resize(2*M);
 
+            // Allocate memory for the forcing term
             lambda1_.resize(2*M);
+
+            // Allocate memory for copying the W-(r) and W+(r) fields
             w_cpy_.resize(2*M);
         }
 
@@ -220,7 +224,7 @@ class langevin_cmplx {
             return G_max_abs;
         }
 
-
+        // Getters
         double adt() { return adt_; }
         double K_ATS() { return K_ATS_; }
 
