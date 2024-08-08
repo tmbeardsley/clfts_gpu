@@ -1,11 +1,13 @@
+// ##############################################################################
+// Exposes a commonly used lookup table for the mapping of the 1d
+// index, k (itself a mapping of the 3d reciprocal-space vector, K), 
+// to the 1d index minusK[k] (a mapping of the 3d reciprocal-space vector, -K). 
+// ##############################################################################
+
 #pragma once
 #include <cuda.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
-
-
-//#include <fstream>
-
 
 class minusK_lookup {  
     
