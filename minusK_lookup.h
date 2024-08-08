@@ -27,7 +27,7 @@ class minusK_lookup {
         }
 
     private:
-        // Calculate the wavevector moduli and store in K[]
+        // Calculate the mapping of 1d index k, to 1d index minusK[k]
         void calc_minusK(int *minusK, int *m) {
             int K0, K1, K2, k;
             int mK0, mK1, mK2;
