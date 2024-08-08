@@ -1,3 +1,6 @@
+// ######################################################################################
+// Exposes public methods to perform a CL-FTS simulation: equilibrate() and statistics()
+// ######################################################################################
 #pragma once
 #include <cuda.h>
 #include <thrust/device_vector.h>
