@@ -6,12 +6,15 @@
 #include <math.h>
 #include "file_IO.h"
 
+// w(k) = get<0>(t)
+// w(-k) = get<1>(t)
+// f(k) = get<2>(t)
+// Calculate norm(w(k)*w(-k))*f(k) on the gpu.
 struct Psi4_calc
 {
     Psi4_calc() {}
 	__device__ __host__
 	double operator()(thrust::tuple<thrust::complex<double>, thrust::complex<double>, double> t) {
-        // w(k) = get<0>(t), w(-k) = get<1>(t), f(k) = get<2>(t)
         return thrust::norm(thrust::get<0>(t)*thrust::get<1>(t))*thrust::get<2>(t);
 	}
 };
@@ -23,10 +26,10 @@ class order_parameter {
     thrust::device_vector<thrust::complex<double>> wk_gpu_;             // Composition field in reciprocal space, w-(k), on the GPU
     thrust::device_vector<double> fk_gpu_;                              // Weighting function to reduce the contribution of large wavevectors in the order parameter
     thrust::device_vector<int> *minusK_gpu_;                            // Given the 1D index, k, then minusK[k] is the 1D index pointing to the negative wavevector in array w[k]
-    cufftHandle wr_to_wk_;
-    int M_;
-    double kc_;
-    const int cuFFTFORWARD = -1;
+    cufftHandle wr_to_wk_;						// Cufft handle for setting up a Fourier transform on the GPU
+    int M_;								// Total number of meshpoints
+    double kc_;								// Wavevector cutoff in f(k)
+    const int cuFFTFORWARD = -1;					// Direction of Fourier transform (real space to k-space)
 
 
     public:
@@ -35,9 +38,11 @@ class order_parameter {
             M_ = M;
             kc_ = kc;
 
+	    // Allocate memory for wk_gpu_ and fk_gpu_
             wk_gpu_.resize(M);
             fk_gpu_.resize(M);
 
+	    // Create a cufft plan to transform fields between real and reciprocal space
             GPU_ERR(cufftPlan3d(&wr_to_wk_, m[0], m[1], m[2], CUFFT_Z2Z));
 
             // Create lookup tables for fk[] and minusK[] and upload to GPU
@@ -80,7 +85,7 @@ class order_parameter {
 
 
     private:
-        // Calculate f(k)
+        // Calculate the function, f(k), to screen out the effects of large wave-vectors
         void calc_fk(double *fk, double kc, int *m, double *L) {
             int K0, K1, K2, k;
             double kx_sq, ky_sq, kz_sq, K;
