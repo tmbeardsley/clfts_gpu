@@ -41,5 +41,6 @@ A real-space position r = (x,y,z) corresponds to a mesh point position r_m = (i,
 "w_eq_<step_number>": The state of the W-(r) and w+(r) fields at simulation step number <step_number> during the equilibration period. First three lines are simulation parameters so it can be used as an input file.<br>
 "w_st_<step_number>": The state of the W-(r) and w+(r) fields at simulation step number <step_number> during the statistics gathering period. First three lines are simulation parameters so it can be used as an input file.<br>
 "phi_eq_<step_number>": The state of the phi-(r) and phi+(r) fields at simulation step number <step_number> during the equilibration period.<br>
-"phi_eq_<step_number>": The state of the phi-(r) and phi+(r) fields at simulation step number <step_number> during the statistics gathering period.<br>
+"phi_st_<step_number>": The state of the phi-(r) and phi+(r) fields at simulation step number <step_number> during the statistics gathering period.<br>
+"Sk_<step_number>": The spherically-averaged structure function at simulation step number <step_number> during the statistics gathering period.<br>
 
