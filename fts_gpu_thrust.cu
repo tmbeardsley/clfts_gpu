@@ -1,8 +1,9 @@
-// fts.cu
-//------------------------------------------------------------
-// GPU version of the FTS code for a diblock copolymer melt
-// Note that lengths are expressed in units of R0=a*N^0.5
-//------------------------------------------------------------
+// #######################################################################
+// Creates a new clfts_simulation(...) object, passing in input file to 
+// its contructor and subsequently accessing its public methods to 
+// equilibrate the system and gather statistics from the equilibrated system
+// and finally output the system's energy
+// #######################################################################
 
 #include "clfts_simulation.h"
 #include <string>
