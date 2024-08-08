@@ -1,5 +1,5 @@
 # clfts_gpu
-ComplexLangevin Field-Theoretic Simulation of Diblock Copolymers on the GPU
+Complex Langevin Field-Theoretic Simulation of Diblock Copolymers on the GPU
 
 See https://www.tbeardsley.com/projects/lfts/clfts_gpu for a detailed discussion of this project.<br>
 
