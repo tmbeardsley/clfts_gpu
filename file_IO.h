@@ -1,6 +1,5 @@
 // #############################################################################
 // Provides useful functions for file reading and writing.
-// Not yet templated as current code version only has need to output doubles.
 // #############################################################################
 #pragma once
 #include <fstream>
