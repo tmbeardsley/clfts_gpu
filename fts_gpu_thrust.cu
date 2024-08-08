@@ -1,9 +1,8 @@
-// #######################################################################
+// ###########################################################################
 // Creates a new clfts_simulation(...) object, passing in input file to 
 // its contructor and subsequently accessing its public methods to 
-// equilibrate the system and gather statistics from the equilibrated system
-// and finally output the system's energy
-// #######################################################################
+// equilibrate the system and gather statistics from the equilibrated system.
+// ###########################################################################
 
 #include "clfts_simulation.h"
 #include <string>
