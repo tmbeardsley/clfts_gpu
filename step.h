@@ -40,11 +40,11 @@ class step {
 
             M_ = M;
 
-            // Allocate memory for g_gpu and copy g from the host. 
+            // Allocate memory for g_gpu.
             // g_gpu_ contains two copies of g[] so that q1[k] and q2[k] can be multiplied on the GPU at the same time
             g_gpu_.resize(2*M);
 
-            // Calculate the lookup table for g (copied to gpu in function for box move to be added later)
+            // Calculate the lookup table for g_gpu_ (copied to gpu in function for box move to be added later)
             update_g_lookup(L);
 
             // Configure cufft plans. cufftPlanMany used for batched processing
@@ -57,18 +57,22 @@ class step {
 
 
 
-
+        // Takes the propagators of the previous monomer (index, i) as input and returns the propagators 
+        // of the next monomer as output.
+        // Works with real- or k-space representations of the propagators, as indicated by bool KSPACE.
         void fwd(   thrust::device_vector<thrust::complex<double>>::iterator& q_in,
                     thrust::device_vector<thrust::complex<double>>::iterator& q_out,
                     thrust::device_vector<thrust::complex<double>>::iterator& h_gpu,
                     int i, bool KSPACE = false)
         {
+            // hX initially used as workspace memory (later represents hA(r) or hB(r))
             thrust::device_vector<thrust::complex<double>>::iterator hX = q_in;
 
             // forward FFT q_i(r) and q^\dagger_{N+1-i}(r)
             cufftDoubleComplex *V1 = (cufftDoubleComplex*)thrust::raw_pointer_cast(&(q_in[0]));
             cufftDoubleComplex *V2 = (cufftDoubleComplex*)thrust::raw_pointer_cast(&(q_out[0]));
 
+            // Perform a fourier transform if calculating real-space propagators
             if (!KSPACE) {
                 GPU_ERR(cufftExecZ2Z(qr_to_qk_, V1, V2, cuFFTFORWARD_));
                 hX = q_out;
@@ -88,6 +92,7 @@ class step {
             hX = (i < NB_) ? h_gpu + M_ : h_gpu;
             thrust::transform(q_out + M_, q_out + 2 * M_, hX, q_out + M_, thrust::multiplies<thrust::complex<double>>());
 
+            // perform additional Fourier transform if calculating k-space propagators
             if (KSPACE) GPU_ERR(cufftExecZ2Z(qr_to_qk_, V2, V2, cuFFTFORWARD_));
 
         }
