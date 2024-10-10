@@ -56,7 +56,7 @@ A real-space position r = (x,y,z) corresponds to a mesh point position r_m = (i,
 <em>n_eq</em> is the number of langevin steps performed to equilibrate the system (integer).<br>
 <em>n_st</em> is the number of langevin steps performed after equilibration has ended, during which statistics are sampled (integer).<br>
 <em>n_smpl</em> is the number of steps between samples being taken in the statistics period (integer).<br>
-<em>save_freq</em> is the number of steps between saving outputs to file.<br><br>
+<em>save_freq</em> is the number of steps between saving outputs to file.<br>
 
 ## Output files
 #### w_eq_<step_number>
