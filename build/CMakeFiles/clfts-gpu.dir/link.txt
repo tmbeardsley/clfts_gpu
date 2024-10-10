@@ -1,0 +1,1 @@
+/usr/bin/g++ @CMakeFiles/clfts-gpu.dir/objects1.rsp -o clfts-gpu @CMakeFiles/clfts-gpu.dir/linkLibs.rsp -L"/usr/local/cuda-12.6/targets/x86_64-linux/lib/stubs" -L"/usr/local/cuda-12.6/targets/x86_64-linux/lib"
