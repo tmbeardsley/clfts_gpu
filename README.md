@@ -41,22 +41,24 @@ Lines 4->(M+3): REAL[W-(r)] IMAG[W-(r)]<br>
 Lines (M+4)->(2M+3): REAL[W+(r)] IMAG[W+(r)]<br>
 
 <b>Notes:</b><br>
-M = (mx\*my\*mz) is the total number of mesh points, such that the proceeding 2*M lines of the file can hold W-(r) and w+(r) fields to load.<br>
 A real-space position r = (x,y,z) corresponds to a mesh point position r_m = (i,j,k), where i=0->mx-1, j=0->my-1 and k=0->mz-1 are integers. The elements of the fields, W-(r) and W+(r), are then written in ascending order of the row-major index: p = mx\*(i\*my+j)+k.<br>
 
 #### Parameter descriptions
-<em>N</em> is the number of monomers in a single polymer chain (integer).<br>
-<em>NA</em> is the number of monomers in the A-block of a polymer chain (integer).<br>
-<em>XeN</em> is the interaction strength between A and B-type monomers (double).<br>
-<em>zetaN</em> is the compressibility factor, zeta, multiplied by N (double).<br>
-<em>C</em> is the square root of the invariant polymerisation index, Nbar (double).<br>
-<em>Ndt</em> is the size of the time step in the Langevin update of W-(r) (double).<br>
-<em>mx, my, mz</em> are the number of mesh points in the x, y, and z dimensions of the simulation box (integers).<br>
-<em>Lx, Ly, Lz</em> are the dimensions of the simulation box (in units of the polymer end-to-end length, R0) in the x, y, and z dimensions (doubles).<br>
-<em>n_eq</em> is the number of langevin steps performed to equilibrate the system (integer).<br>
-<em>n_st</em> is the number of langevin steps performed after equilibration has ended, during which statistics are sampled (integer).<br>
-<em>n_smpl</em> is the number of steps between samples being taken in the statistics period (integer).<br>
-<em>save_freq</em> is the number of steps between saving outputs to file.<br>
+| Parameter | Type | Description |
+| :---: | :---: | --- |
+| <em>N</em> | Integer | Number of monomers in a single polymer chain (integer) |
+| <em>NA</em> | Integer | Number of monomers in the A-block of a polymer chain (integer) |
+| <em>XeN</em> | Integer | Interaction strength between A and B-type monomers (double) |
+| <em>zetaN</em> | Integer | Compressibility factor, zeta, multiplied by N (double) |
+| <em>C</em> | Integer | Square root of the invariant polymerisation index, Nbar (double) |
+| <em>Ndt</em> | Integer | Size of the time step in the Langevin update of W-(r) (double) |
+| <em>mx, my, mz</em> | Integer | Number of mesh points in the x, y, and z dimensions of the simulation box (integers) |
+| <em>Lx, Ly, Lz</em> | Integer | Dimensions of the simulation box (in units of the polymer end-to-end length, R0) in the x, y, and z dimensions (doubles) |
+| <em>n_eq</em> | Integer | Number of langevin steps performed to equilibrate the system (integer) |
+| <em>n_st</em> | Integer | Number of langevin steps performed after equilibration has ended, during which statistics are sampled (integer) |
+| <em>n_smpl</em> | Integer | Number of steps between samples being taken in the statistics period (integer) |
+| <em>save_freq</em> | Integer | Number of steps between saving outputs to file |
+| M | Integer | Total number of mesh points (M = mx\*my\*mz), such that the proceeding 2*M lines of the file can hold W-(r) and w+(r) fields to load |
 
 ## Output files
 #### w_eq_<step_number>
