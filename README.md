@@ -1,5 +1,12 @@
 # Complex Langevin Field-Theoretic Simulation of Diblock Copolymers on the GPU
 
+
+| <img src="https://www.tbeardsley.com/imgs/projects/lfts/clfts_gpu/clfts.png" width="600px"> |
+| :---: |
+| Real and imaginary parts of W<sub>-</sub>(**r**) at Nbar=10<sup>5</sup>, N=90, &chi;N=12, m=32 and L=4.209. |
+
+
+
 ## 1. Description
 See https://www.tbeardsley.com/projects/lfts/clfts_gpu for a detailed discussion of this project.<br>
 
